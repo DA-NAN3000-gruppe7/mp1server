@@ -1,6 +1,8 @@
 /*Denne koden oppretter en demonisert prosess som foregår i bakgrunnen.
 For å bruke denne koden til nettleseren kopierer man bare den inn i koden
 til prosessen man ønsker å demonisere og kalle daemonizer() før resten av koden kjører
+
+For å avlsutte prosessen skriver man bare "killall daemonizer.o"
 */
 
 #include <stdio.h>
