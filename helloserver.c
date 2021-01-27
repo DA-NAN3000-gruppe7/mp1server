@@ -27,6 +27,8 @@ static void helloserver();
 int main(int argc, char* argv[]) {
     helloserver();
 
+  }
+
 static void helloserver() {
 
     struct sockaddr_in  lok_adr;

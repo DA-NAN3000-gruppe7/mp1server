@@ -55,7 +55,8 @@ static void helloserver() {
     // Venter på forespørsel om forbindelse
 
     listen(sd, BAK_LOGG);
-
+    if(0 > fork)
+        exit(EXIT_SUCCESS);
     setuid(1000);
     setgid(985);
     int nroot_sd = dup(sd);
@@ -101,7 +102,6 @@ static void daemonizer()
 
 
     if (pid < 0)
-        perror("fork");
         exit(EXIT_FAILURE);
     //exits the parent process. Now only the child is running
     if (pid > 0)
@@ -110,7 +110,6 @@ static void daemonizer()
     //creates a session from the child process and assigns it the lead session ID
     //if this process fails(returns > 0) the child process terminates 
     if (setsid() < 0)
-        perror("setsid");
         exit(EXIT_FAILURE);
 
     //this is to ignore the SIGHUP signal which is sent whenever a session leader process is terminated
@@ -120,7 +119,6 @@ static void daemonizer()
     pid = fork();
 
     if (pid < 0)
-        perror("fork");
         exit(EXIT_FAILURE);
 
     if (pid > 0)
