@@ -73,7 +73,7 @@ static void helloserver() {
 
         if(0==fork()) {
 
-                // Setter opp for å lese fil
+                // Setter opp variabler for å lese fil
                 int read_size;
                 char client_message[2000];
                 char inPage[128] = "";
@@ -88,10 +88,12 @@ static void helloserver() {
                     FILE* fp = fopen(returned_str, "r");
                     if(fp) {
                         
-                        char buf[1024];
+                        char buf[1024]; // Buffer på 1024
 
+                        // Så lenge det er mer data å sende...
                         while (fgets(buf, sizeof(buf), fp) != NULL) {
                             
+                            // Sender data del for del til klient
                             if (send(ny_sd, buf, strlen(buf), 0) < 0) {
                                 // Error
                                 
@@ -167,7 +169,7 @@ static void chroot_function() {
     }
 }
 
-// Postcondition: clean file-url sent back from input-string (file)
+// Postcondition: url for fil returneres
 char * parseUrl(char sIn[]) {
     
     /* data to store client query, warning, should not be big enough to handle all cases */
@@ -175,33 +177,35 @@ char * parseUrl(char sIn[]) {
     static char page[128] = ""; // !! Bør endres til noe annet enn static!
     char host[128] = "";
     
-    /* read query */
+    // Hvis inputstring har innhold
     if (sIn > 0)
     {
         char *tok;
-        char sep[] = "\r\n";
+        char sep[] = "\r\n"; // Seperator-string
         char tmp[128];
-        /* cut query in lines */
+        
+        // Deler stringen inn slik at hver linje leses for seg
         tok = strtok(sIn, sep);
 
-        /* process each line */
+        // Prosesserer hver enkelt linje
         while (tok)
         {
-            /* See if line contains 'GET' */
+            // Sjekker om tekst-linja inneholder "GET"
             if (1 == sscanf(tok, "GET %s HTTP/1.1", tmp))
             {
-                
-                strcpy(page, tmp);
+                strcpy(page, tmp); // Legger url i variable "page"
             }
-            /* See if line contains 'Host:' */
+            // Sjekker om lija inneholder "Host"
             else if (1 == sscanf(tok, "Host: %s", tmp))
             {
-                strcpy(host, tmp);
+                strcpy(host, tmp); // Legger host i variable "host", ikke nødvendig i mp1
             }
-            /* get next line */
+            
+            // Videre til neste linje
             tok = strtok(query, sep);
         }
-        /* print got data */
+        
+        // Printer data som er mottatt
         printf("Wanted page is: %s%s\n", host, page);
         fflush(stdout);
 
