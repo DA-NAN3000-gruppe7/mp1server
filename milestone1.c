@@ -3,9 +3,12 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
+#include<sys/wait.h> 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <string.h>
+
 
 #define LOKAL_PORT 80
 #define BAK_LOGG 10 // Størrelse på for kø ventende forespørsler 
@@ -13,6 +16,8 @@
 static void daemonizer();
 static void chroot_function();
 static void helloserver();
+char * parseUrl(char sIn[]);
+void func(int signum); 
 
 int main(int argc, char* argv[]) {
     close(1);
@@ -28,6 +33,7 @@ int main(int argc, char* argv[]) {
     
     //printf("test");
     close(file);
+    return 0;
 }
 
 static void helloserver() {
@@ -55,8 +61,7 @@ static void helloserver() {
     // Venter på forespørsel om forbindelse
 
     listen(sd, BAK_LOGG);
-    if(0 > fork)
-        exit(EXIT_SUCCESS);
+
     setuid(1000);
     setgid(985);
     int nroot_sd = dup(sd);
@@ -68,28 +73,56 @@ static void helloserver() {
 
         if(0==fork()) {
 
-          dup2(ny_sd, 1); // redirigerer socket til standard utgang
+                // Setter opp for å lese fil
+                int read_size;
+                char client_message[2000];
+                char inPage[128] = "";
 
-          printf("HTTP/1.1 200 OK\n");
-          printf("Content-Type: text/plain\n");
-          printf("\n");
-          printf("Hallo klient!\n");
+                // Leser inn fil, parser filnavn
+                if((read_size = recv(ny_sd , client_message , 2000 , 0)) > 0) {
 
-          fflush(stdout);
+                    char *returned_str = parseUrl(client_message);
+                    strcpy(inPage, returned_str);
+                  
+                    // Leser filforespørsel fra klient
+                    FILE* fp = fopen(returned_str, "r");
+                    if(fp) {
+                        
+                        char buf[1024];
 
-          // Sørger for å stenge socket for skriving og lesing
-          // NB! Frigjør ingen plass i fildeskriptortabellen
-          shutdown(ny_sd, SHUT_RDWR);
-          exit(0);
+                        while (fgets(buf, sizeof(buf), fp) != NULL) {
+                            
+                            if (send(ny_sd, buf, strlen(buf), 0) < 0) {
+                                // Error
+                                
+                            } else {
+                                // Sender suksess
+                                
+                            }
+                        }
+                        
+                        fclose(fp);
+                    } else {
+                        printf("Kan ikke lese fil..\n");
+                        fflush(stdout);
+                    }
+                }
+
+            // Sørger for å stenge socket for skriving og lesing
+            // NB! Frigjør ingen plass i fildeskriptortabellen
+            shutdown(ny_sd, SHUT_RDWR);
+            exit(0);
         }
 
-        else
-          close(ny_sd);
+        else {
+            signal(SIGCHLD, func); 
+
+            close(ny_sd);
+        }
       }
 }
 
-static void daemonizer()
-{
+static void daemonizer() {
     //create a process ID variable
     pid_t pid;
 
@@ -125,13 +158,65 @@ static void daemonizer()
         exit(EXIT_SUCCESS);
 }
 
-static void chroot_function()
-{
+static void chroot_function() {
     //calling the chroot process and sets "." as the root directory
     //if error code -1 is returned, the code exits
     if(chroot(".") == -1) {
         perror("chroot");
         exit(EXIT_FAILURE);
     }
-
 }
+
+// Postcondition: clean file-url sent back from input-string (file)
+char * parseUrl(char sIn[]) {
+    
+    /* data to store client query, warning, should not be big enough to handle all cases */
+    char query[1024] = "";
+    static char page[128] = ""; // !! Bør endres til noe annet enn static!
+    char host[128] = "";
+    
+    /* read query */
+    if (sIn > 0)
+    {
+        char *tok;
+        char sep[] = "\r\n";
+        char tmp[128];
+        /* cut query in lines */
+        tok = strtok(sIn, sep);
+
+        /* process each line */
+        while (tok)
+        {
+            /* See if line contains 'GET' */
+            if (1 == sscanf(tok, "GET %s HTTP/1.1", tmp))
+            {
+                
+                strcpy(page, tmp);
+            }
+            /* See if line contains 'Host:' */
+            else if (1 == sscanf(tok, "Host: %s", tmp))
+            {
+                strcpy(host, tmp);
+            }
+            /* get next line */
+            tok = strtok(query, sep);
+        }
+        /* print got data */
+        printf("Wanted page is: %s%s\n", host, page);
+        fflush(stdout);
+
+        
+    } 
+    else 
+    {
+        /* handle the error (-1) or no data to read (0) */
+    }
+
+    return page;
+}
+
+
+void func(int signum) { 
+    wait(NULL); 
+} 
+
